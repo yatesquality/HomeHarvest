@@ -11,6 +11,34 @@ _SEARCH_HOMES_DATA_BASE = """{
     list_price_max
     list_price_min
     price_per_sqft
+    tags
+    details {
+        category
+        text
+        parent_category
+    }
+    pet_policy {
+        cats
+        dogs
+        dogs_small
+        dogs_large
+        __typename
+    }
+    units {
+        availability {
+          date
+          __typename
+        }
+        description {
+          baths_consolidated
+          baths
+          beds
+          sqft
+          __typename
+        }
+        list_price
+        __typename
+    }
     flags {
         is_contingent
         is_pending
@@ -64,11 +92,14 @@ _SEARCH_HOMES_DATA_BASE = """{
     tax_record {
         public_record_id
     }
-    primary_photo {
+    primary_photo(https: true) {
         href
     }
-    photos {
+    photos(https: true) {
         href
+        tags {
+            label
+        }
     }
     advertisers {
         email
@@ -116,15 +147,63 @@ _SEARCH_HOMES_DATA_BASE = """{
         }
         rental_management {
             name
+            href
             fulfillment_id
         }
     }
     """
 
+
+HOME_FRAGMENT = """
+fragment HomeData on Home {
+    property_id
+    nearbySchools: nearby_schools(radius: 5.0, limit_per_level: 3) {
+        __typename schools { district { __typename id name } }
+    }
+    taxHistory: tax_history { __typename tax year assessment { __typename building land total } }
+    monthly_fees {
+        description
+        display_amount
+    }
+    one_time_fees {
+        description
+        display_amount
+    }
+    parking {
+        unassigned_space_rent
+        assigned_spaces_available
+        description
+        assigned_space_rent
+    }
+    terms {
+        text
+        category
+    }
+}
+"""
+
 HOMES_DATA = """%s
                 nearbySchools: nearby_schools(radius: 5.0, limit_per_level: 3) {
                             __typename schools { district { __typename id name } }
                         }
+                monthly_fees {
+                    description
+                    display_amount
+                }
+                one_time_fees {
+                    description
+                    display_amount
+                }
+                parking {
+                    unassigned_space_rent
+                    assigned_spaces_available
+                    description
+                    assigned_space_rent
+                }
+                terms {
+                    text
+                    category
+                }
                 taxHistory: tax_history { __typename tax year assessment { __typename building land total } }
                 estimates {
                     __typename

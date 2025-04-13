@@ -83,7 +83,12 @@ Optional
     - 'farm'
     - 'land'
     - 'mobile'
-
+│
+├── return_type (option): Choose the return type.
+│    - 'pandas' (default)
+│    - 'pydantic'
+│    - 'raw' (json)
+│
 ├── radius (decimal): Radius in miles to find comparable properties based on individual addresses.
 │    Example: 5.5 (fetches properties within a 5.5-mile radius if location is set to a specific address; otherwise, ignored)
 │

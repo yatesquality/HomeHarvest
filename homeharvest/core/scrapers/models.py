@@ -4,6 +4,12 @@ from enum import Enum
 from typing import Optional
 
 
+class ReturnType(Enum):
+    pydantic = "pydantic"
+    pandas = "pandas"
+    raw = "raw"
+
+
 class SiteName(Enum):
     ZILLOW = "zillow"
     REDFIN = "redfin"
@@ -148,6 +154,9 @@ class Property:
     property_url: str
 
     property_id: str
+    #: allows_cats: bool
+    #: allows_dogs: bool
+
     listing_id: str | None = None
 
     mls: str | None = None
@@ -167,6 +176,8 @@ class Property:
     hoa_fee: int | None = None
     days_on_mls: int | None = None
     description: Description | None = None
+    tags: list[str] | None = None
+    details: list[dict] | None = None
 
     latitude: float | None = None
     longitude: float | None = None

@@ -32,8 +32,9 @@ from ..models import (
     Builder,
     Advertisers,
     Office,
+    ReturnType
 )
-from .queries import GENERAL_RESULTS_QUERY, SEARCH_HOMES_DATA, HOMES_DATA
+from .queries import GENERAL_RESULTS_QUERY, SEARCH_HOMES_DATA, HOMES_DATA, HOME_FRAGMENT
 
 
 class RealtorScraper(Scraper):
@@ -120,7 +121,7 @@ class RealtorScraper(Scraper):
 
         property_info = response_json["data"]["home"]
 
-        return [self.process_property(property_info, "home")]
+        return [self.process_property(property_info)]
 
     @staticmethod
     def process_advertisers(advertisers: list[dict] | None) -> Advertisers | None:
@@ -168,7 +169,7 @@ class RealtorScraper(Scraper):
 
         return processed_advertisers
 
-    def process_property(self, result: dict, query_name: str) -> Property | None:
+    def process_property(self, result: dict) -> Property | None:
         mls = result["source"].get("id") if "source" in result and isinstance(result["source"], dict) else None
 
         if not mls and self.mls_only:
@@ -188,9 +189,7 @@ class RealtorScraper(Scraper):
             return
 
         property_id = result["property_id"]
-        prop_details = self.get_prop_details(property_id) if self.extra_property_data and query_name != "home" else {}
-        if not prop_details:
-            prop_details = self.process_extra_property_details(result)
+        prop_details = self.process_extra_property_details(result) if self.extra_property_data else {}
 
         property_estimates_root = result.get("current_estimates") or result.get("estimates", {}).get("currentValues")
         estimated_value = self.get_key(property_estimates_root, [0, "estimate"])
@@ -233,7 +232,7 @@ class RealtorScraper(Scraper):
         )
         return realty_property
 
-    def general_search(self, variables: dict, search_type: str) -> Dict[str, Union[int, list[Property]]]:
+    def general_search(self, variables: dict, search_type: str) -> Dict[str, Union[int, Union[list[Property], list[dict]]]]:
         """
         Handles a location area & returns a list of properties
         """
@@ -324,6 +323,7 @@ class RealtorScraper(Scraper):
                                         %s
                                         %s
                                     }
+                                    bucket: { sort: "fractal_v1.1.3_fr" }
                                     %s
                                     limit: 200
                                     offset: $offset
@@ -363,7 +363,7 @@ class RealtorScraper(Scraper):
         response_json = response.json()
         search_key = "home_search" if "home_search" in query else "property_search"
 
-        properties: list[Property] = []
+        properties: list[Union[Property, dict]] = []
 
         if (
             response_json is None
@@ -381,15 +381,25 @@ class RealtorScraper(Scraper):
 
         #: limit the number of properties to be processed
         #: example, if your offset is 200, and your limit is 250, return 50
-        properties_list = properties_list[: self.limit - offset]
+        properties_list: list[dict] = properties_list[: self.limit - offset]
 
-        with ThreadPoolExecutor(max_workers=self.NUM_PROPERTY_WORKERS) as executor:
-            futures = [executor.submit(self.process_property, result, search_key) for result in properties_list]
+        if self.extra_property_data:
+            property_ids = [data["property_id"] for data in properties_list]
+            extra_property_details = self.get_bulk_prop_details(property_ids) or {}
 
-            for future in as_completed(futures):
-                result = future.result()
-                if result:
-                    properties.append(result)
+            for result in properties_list:
+                result.update(extra_property_details.get(result["property_id"], {}))
+
+        if self.return_type != ReturnType.raw:
+            with ThreadPoolExecutor(max_workers=self.NUM_PROPERTY_WORKERS) as executor:
+                futures = [executor.submit(self.process_property, result) for result in properties_list]
+
+                for future in as_completed(futures):
+                    result = future.result()
+                    if result:
+                        properties.append(result)
+        else:
+            properties = properties_list
 
         return {
             "total": total_properties,
@@ -520,28 +530,35 @@ class RealtorScraper(Scraper):
         wait=wait_exponential(min=4, max=10),
         stop=stop_after_attempt(3),
     )
-    def get_prop_details(self, property_id: str) -> dict:
-        if not self.extra_property_data:
+    def get_bulk_prop_details(self, property_ids: list[str]) -> dict:
+        """
+        Fetch extra property details for multiple properties in a single GraphQL query.
+        Returns a map of property_id to its details.
+        """
+        if not self.extra_property_data or not property_ids:
             return {}
 
-        query = """query GetHome($property_id: ID!) {
-                    home(property_id: $property_id) {
-                        __typename
+        property_ids = list(set(property_ids))
 
-                        nearbySchools: nearby_schools(radius: 5.0, limit_per_level: 3) {
-                            __typename schools { district { __typename id name } }
-                        }
-                        taxHistory: tax_history { __typename tax year assessment { __typename building land total } }
-                    }
-                }"""
+        # Construct the bulk query
+        fragments = "\n".join(
+            f'home_{property_id}: home(property_id: {property_id}) {{ ...HomeData }}'
+            for property_id in property_ids
+        )
+        query = f"""{HOME_FRAGMENT}
+        
+        query GetHomes {{
+            {fragments}
+        }}"""
 
-        variables = {"property_id": property_id}
-        response = self.session.post(self.SEARCH_GQL_URL, json={"query": query, "variables": variables})
-
+        response = self.session.post(self.SEARCH_GQL_URL, json={"query": query})
         data = response.json()
-        property_details = data["data"]["home"]
 
-        return self.process_extra_property_details(property_details)
+        if "data" not in data:
+            return {}
+
+        properties = data["data"]
+        return {data.replace('home_', ''): properties[data] for data in properties if properties[data]}
 
     @staticmethod
     def _parse_neighborhoods(result: dict) -> Optional[str]:

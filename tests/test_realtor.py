@@ -1,4 +1,5 @@
-from homeharvest import scrape_property
+from homeharvest import scrape_property, Property
+import pandas as pd
 
 
 def test_realtor_pending_or_contingent():
@@ -287,3 +288,15 @@ def test_phone_number_matching():
 
     #: assert phone numbers are the same
     assert row["agent_phones"].values[0] == matching_row["agent_phones"].values[0]
+
+
+def test_return_type():
+    results = {
+        "pandas": scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100),
+        "pydantic": scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100, return_type="pydantic"),
+        "raw": scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100, return_type="raw"),
+    }
+
+    assert isinstance(results["pandas"], pd.DataFrame)
+    assert isinstance(results["pydantic"][0], Property)
+    assert isinstance(results["raw"][0], dict)

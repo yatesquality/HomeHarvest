@@ -3,12 +3,13 @@ import pandas as pd
 from .core.scrapers import ScraperInput
 from .utils import process_result, ordered_properties, validate_input, validate_dates, validate_limit
 from .core.scrapers.realtor import RealtorScraper
-from .core.scrapers.models import ListingType, SearchPropertyType
+from .core.scrapers.models import ListingType, SearchPropertyType, ReturnType, Property
 
 
 def scrape_property(
     location: str,
     listing_type: str = "for_sale",
+    return_type: str = "pandas",
     property_type: list[str] | None = None,
     radius: float = None,
     mls_only: bool = False,
@@ -19,12 +20,13 @@ def scrape_property(
     foreclosure: bool = None,
     extra_property_data: bool = True,
     exclude_pending: bool = False,
-    limit: int = 10000,
-) -> pd.DataFrame:
+    limit: int = 10000
+) -> pd.DataFrame | list[dict] | list[Property]:
     """
     Scrape properties from Realtor.com based on a given location and listing type.
     :param location: Location to search (e.g. "Dallas, TX", "85281", "2530 Al Lipscomb Way")
     :param listing_type: Listing Type (for_sale, for_rent, sold, pending)
+    :param return_type: Return type (pandas, pydantic, raw)
     :param property_type: Property Type (single_family, multi_family, condos, condo_townhome_rowhome_coop, condo_townhome, townhomes, duplex_triplex, farm, land, mobile)
     :param radius: Get properties within _ (e.g. 1.0) miles. Only applicable for individual addresses.
     :param mls_only: If set, fetches only listings with MLS IDs.
@@ -42,7 +44,8 @@ def scrape_property(
 
     scraper_input = ScraperInput(
         location=location,
-        listing_type=ListingType[listing_type.upper()],
+        listing_type=ListingType(listing_type.upper()),
+        return_type=ReturnType(return_type.lower()),
         property_type=[SearchPropertyType[prop.upper()] for prop in property_type] if property_type else None,
         proxy=proxy,
         radius=radius,
@@ -58,6 +61,9 @@ def scrape_property(
 
     site = RealtorScraper(scraper_input)
     results = site.search()
+
+    if scraper_input.return_type != ReturnType.pandas:
+        return results
 
     properties_dfs = [df for result in results if not (df := process_result(result)).empty]
     if not properties_dfs:

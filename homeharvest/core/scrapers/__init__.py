@@ -1,11 +1,13 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import Union
+
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import uuid
 from ...exceptions import AuthenticationError
-from .models import Property, ListingType, SiteName, SearchPropertyType
+from .models import Property, ListingType, SiteName, SearchPropertyType, ReturnType
 import json
 
 
@@ -24,6 +26,7 @@ class ScraperInput:
     extra_property_data: bool | None = True
     exclude_pending: bool | None = False
     limit: int = 10000
+    return_type: ReturnType = ReturnType.pandas
 
 
 class Scraper:
@@ -81,8 +84,9 @@ class Scraper:
         self.extra_property_data = scraper_input.extra_property_data
         self.exclude_pending = scraper_input.exclude_pending
         self.limit = scraper_input.limit
+        self.return_type = scraper_input.return_type
 
-    def search(self) -> list[Property]: ...
+    def search(self) -> list[Union[Property | dict]]: ...
 
     @staticmethod
     def _parse_home(home) -> Property: ...
