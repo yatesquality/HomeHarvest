@@ -25,6 +25,7 @@ class SiteName(Enum):
 
 class SearchPropertyType(Enum):
     SINGLE_FAMILY = "single_family"
+    APARTMENT = "apartment"
     CONDOS = "condos"
     CONDO_TOWNHOME_ROWHOME_COOP = "condo_townhome_rowhome_coop"
     CONDO_TOWNHOME = "condo_townhome"

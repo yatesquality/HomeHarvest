@@ -220,19 +220,19 @@ HOMES_DATA = """%s
 }""" % _SEARCH_HOMES_DATA_BASE
 
 SEARCH_HOMES_DATA = """%s
-                    current_estimates {
-                            __typename
-                            source {
-                                __typename
-                                type
-                                name
-                            }
-                            estimate
-                            estimateHigh: estimate_high
-                            estimateLow: estimate_low
-                            date
-                            isBestHomeValue: isbest_homevalue
-                        }
+current_estimates {
+    __typename
+    source {
+        __typename
+        type
+        name
+    }
+    estimate
+    estimateHigh: estimate_high
+    estimateLow: estimate_low
+    date
+    isBestHomeValue: isbest_homevalue
+}
 }""" % _SEARCH_HOMES_DATA_BASE
 
 GENERAL_RESULTS_QUERY = """{

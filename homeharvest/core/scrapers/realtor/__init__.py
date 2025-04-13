@@ -257,7 +257,7 @@ class RealtorScraper(Scraper):
         sort_param = (
             "sort: [{ field: sold_date, direction: desc }]"
             if self.listing_type == ListingType.SOLD
-            else "sort: [{ field: list_date, direction: desc }]"
+            else ""  #: "sort: [{ field: list_date, direction: desc }]"  #: prioritize normal fractal sort from realtor
         )
 
         pending_or_contingent_param = (
@@ -305,20 +305,15 @@ class RealtorScraper(Scraper):
             )
         elif search_type == "area":  #: general search, came from a general location
             query = """query Home_search(
-                                $city: String,
-                                $county: [String],
-                                $state_code: String,
-                                $postal_code: String
+                                $location: String!,
                                 $offset: Int,
                             ) {
                                 home_search(
                                     query: {
                                         %s
-                                        city: $city
-                                        county: $county
-                                        postal_code: $postal_code
-                                        state_code: $state_code
+                                        search_location: {location: $location}
                                         status: %s
+                                        unique: true
                                         %s
                                         %s
                                         %s
@@ -444,10 +439,7 @@ class RealtorScraper(Scraper):
 
         else:  #: general search, location
             search_variables |= {
-                "city": location_info.get("city"),
-                "county": location_info.get("county"),
-                "state_code": location_info.get("state_code"),
-                "postal_code": location_info.get("postal_code"),
+                "location": self.location,
             }
 
         if self.foreclosure:
