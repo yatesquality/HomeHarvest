@@ -305,15 +305,20 @@ class RealtorScraper(Scraper):
             )
         elif search_type == "area":  #: general search, came from a general location
             query = """query Home_search(
-                                $location: String!,
+                                $city: String,
+                                $county: [String],
+                                $state_code: String,
+                                $postal_code: String
                                 $offset: Int,
                             ) {
                                 home_search(
                                     query: {
                                         %s
-                                        search_location: {location: $location}
+                                        city: $city
+                                        county: $county
+                                        postal_code: $postal_code
+                                        state_code: $state_code
                                         status: %s
-                                        unique: true
                                         %s
                                         %s
                                         %s
@@ -432,14 +437,18 @@ class RealtorScraper(Scraper):
                     "radius": "{}mi".format(self.radius),
                 }
 
-        #: elif location_type == "postal_code":
-        #:     search_variables |= {
-        #:         "postal_code": location_info.get("postal_code"),
-        #:     }
+        elif location_type == "postal_code":
+            search_variables |= {
+                "postal_code": location_info.get("postal_code"),
+            }
 
         else:  #: general search, location
             search_variables |= {
-                "location": self.location,
+                "city": location_info.get("city"),
+                "county": location_info.get("county"),
+                "state_code": location_info.get("state_code"),
+                "postal_code": location_info.get("postal_code"),
+
             }
 
         if self.foreclosure:
