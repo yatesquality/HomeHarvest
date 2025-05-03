@@ -432,10 +432,10 @@ class RealtorScraper(Scraper):
                     "radius": "{}mi".format(self.radius),
                 }
 
-        elif location_type == "postal_code":
-            search_variables |= {
-                "postal_code": location_info.get("postal_code"),
-            }
+        #: elif location_type == "postal_code":
+        #:     search_variables |= {
+        #:         "postal_code": location_info.get("postal_code"),
+        #:     }
 
         else:  #: general search, location
             search_variables |= {

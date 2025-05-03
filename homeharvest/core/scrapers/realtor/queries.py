@@ -36,6 +36,13 @@ _SEARCH_HOMES_DATA_BASE = """{
           sqft
           __typename
         }
+        photos(https: true) {
+            title
+            href
+            tags {
+                label
+            }
+        }
         list_price
         __typename
     }
@@ -90,12 +97,17 @@ _SEARCH_HOMES_DATA_BASE = """{
         }
     }
     tax_record {
+        cl_id
         public_record_id
+        last_update_date
+        apn
+        tax_parcel_id
     }
     primary_photo(https: true) {
         href
     }
     photos(https: true) {
+        title
         href
         tags {
             label
