@@ -292,11 +292,14 @@ def test_phone_number_matching():
 
 def test_return_type():
     results = {
-        "pandas": scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100),
-        "pydantic": scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100, return_type="pydantic"),
-        "raw": scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100, return_type="raw"),
+        "pandas": [scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100)],
+        "pydantic": [scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100, return_type="pydantic")],
+        "raw": [
+            scrape_property(location="Surprise, AZ", listing_type="for_rent", limit=100, return_type="raw"),
+            scrape_property(location="66642", listing_type="for_rent", limit=100, return_type="raw"),
+        ],
     }
 
-    assert isinstance(results["pandas"], pd.DataFrame)
-    assert isinstance(results["pydantic"][0], Property)
-    assert isinstance(results["raw"][0], dict)
+    assert all(isinstance(result, pd.DataFrame) for result in results["pandas"])
+    assert all(isinstance(result[0], Property) for result in results["pydantic"])
+    assert all(isinstance(result[0], dict) for result in results["raw"])

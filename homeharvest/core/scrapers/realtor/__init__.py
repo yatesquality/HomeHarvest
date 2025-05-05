@@ -121,7 +121,10 @@ class RealtorScraper(Scraper):
 
         property_info = response_json["data"]["home"]
 
-        return [self.process_property(property_info)]
+        if self.return_type != ReturnType.raw:
+            return [self.process_property(property_info)]
+        else:
+            return [property_info]
 
     @staticmethod
     def process_advertisers(advertisers: list[dict] | None) -> Advertisers | None:
