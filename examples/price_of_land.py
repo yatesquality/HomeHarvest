@@ -2,7 +2,7 @@
 This script scrapes sold and pending sold land listings in past year for a list of zip codes and saves the data to individual Excel files.
 It adds two columns to the data: 'lot_acres' and 'ppa' (price per acre) for user to analyze average price of land in a zip code.
 """
-
+git pull --no-rebasegit pull --no-rebase
 import os
 import pandas as pd
 from homeharvest import scrape_property

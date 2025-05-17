@@ -1,4 +1,3 @@
-@@ -0,0 +1,176 @@
 import os
 import sys
 import logging
@@ -89,20 +88,25 @@ def fetch_state_custom(state, listing_types, start_date, end_date, max_rows):
 def process_state_cli(args_tuple):
     state, listing_types, start_date, end_date, max_rows, output_dir, output_format, overwrite, columns_map = args_tuple
     filename = os.path.join(output_dir, f"{state}_properties.{ 'xlsx' if output_format == 'excel' else 'csv' }")
-    if os.path.exists(filename) and not overwrite:
-        logging.info(f"Skipping {filename}, already exists.")
-        print(f"Skipping {filename}, already exists.")
+
+    json_filename = os.path.join(output_dir, f"{state}_properties.json")
+    if os.path.exists(filename) and os.path.exists(json_filename) and not overwrite:
+        logging.info(f"Skipping {filename} and {json_filename}, already exist.")
+        print(f"Skipping {filename} and {json_filename}, already exist.")
         return
     df_state = fetch_state_custom(state, listing_types, start_date, end_date, max_rows)
     if df_state is not None:
         available_cols = [col for col in columns_map.keys() if col in df_state.columns]
         df_export = df_state[available_cols].rename(columns={k: v for k, v in columns_map.items() if k in available_cols})
+        # Export CSV or Excel
         if output_format == 'excel':
             df_export.to_excel(filename, index=False)
         else:
             df_export.to_csv(filename, index=False)
-        logging.info(f"Saved {len(df_export)} properties for {state} to {filename}")
-        print(f"Saved {len(df_export)} properties for {state} to {filename}")
+        # Export JSON (records format)
+        df_export.to_json(json_filename, orient='records', lines=False, force_ascii=False)
+        logging.info(f"Saved {len(df_export)} properties for {state} to {filename} and {json_filename}")
+        print(f"Saved {len(df_export)} properties for {state} to {filename} and {json_filename}")
     else:
         logging.info(f"No data for {state}")
         print(f"No data for {state}")
