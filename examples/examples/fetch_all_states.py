@@ -20,6 +20,10 @@ LISTING_TYPES = ['sold', 'for_sale', 'for_rent', 'pending']
 DAYS_PER_CHUNK = 30
 START_DATE = datetime(2024, 1, 1)
 END_DATE = datetime.now()
+
+# New output directory for site properties
+SITE_PROPERTIES_DIR = 'site_properties'
+os.makedirs(SITE_PROPERTIES_DIR, exist_ok=True)
 OUTPUT_DIR = 'state_exports'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -35,8 +39,8 @@ def parse_args():
     parser.add_argument('--listing_types', nargs='+', default=LISTING_TYPES, help='Listing types to fetch (default: all types)')
     parser.add_argument('--start_date', type=str, default='2024-01-01', help='Start date (YYYY-MM-DD)')
     parser.add_argument('--end_date', type=str, default=datetime.now().strftime('%Y-%m-%d'), help='End date (YYYY-MM-DD)')
-    parser.add_argument('--output_dir', type=str, default='state_exports', help='Output directory')
-    parser.add_argument('--max_rows', type=int, default=10000, help='Max properties per state')
+    parser.add_argument('--output_dir', type=str, default=SITE_PROPERTIES_DIR, help='Output directory')
+    parser.add_argument('--max_rows', type=int, default=500, help='Max properties per state')
     parser.add_argument('--output_format', choices=['csv', 'excel'], default='csv', help='Output file format')
     parser.add_argument('--processes', type=int, default=1, help='Number of parallel processes')
     parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files')
@@ -77,7 +81,8 @@ def fetch_state_custom(state, listing_types, start_date, end_date, max_rows):
                 extra_property_data=True
             )
             if len(properties) > 0:
-                all_chunks.append(properties)
+                # Limit to 500 properties per state
+                all_chunks.append(properties.head(max_rows))
         except Exception as e:
             logging.error(f"Error fetching {state} {listing_type}: {e}")
     if all_chunks:
@@ -87,8 +92,7 @@ def fetch_state_custom(state, listing_types, start_date, end_date, max_rows):
 
 def process_state_cli(args_tuple):
     state, listing_types, start_date, end_date, max_rows, output_dir, output_format, overwrite, columns_map = args_tuple
-    filename = os.path.join(output_dir, f"{state}_properties.{ 'xlsx' if output_format == 'excel' else 'csv' }")
-
+    filename = os.path.join(output_dir, f"{state}_properties.csv")
     json_filename = os.path.join(output_dir, f"{state}_properties.json")
     if os.path.exists(filename) and os.path.exists(json_filename) and not overwrite:
         logging.info(f"Skipping {filename} and {json_filename}, already exist.")
@@ -96,13 +100,15 @@ def process_state_cli(args_tuple):
         return
     df_state = fetch_state_custom(state, listing_types, start_date, end_date, max_rows)
     if df_state is not None:
-        available_cols = [col for col in columns_map.keys() if col in df_state.columns]
-        df_export = df_state[available_cols].rename(columns={k: v for k, v in columns_map.items() if k in available_cols})
-        # Export CSV or Excel
-        if output_format == 'excel':
-            df_export.to_excel(filename, index=False)
-        else:
-            df_export.to_csv(filename, index=False)
+        # Export all columns, including images and 3D tour views
+        df_export = df_state.copy()
+        # Ensure 'photos' and 'tour_3d_url' columns exist
+        if 'photos' not in df_export.columns:
+            df_export['photos'] = None
+        if 'tour_3d_url' not in df_export.columns:
+            df_export['tour_3d_url'] = None
+        # Export CSV
+        df_export.to_csv(filename, index=False)
         # Export JSON (records format)
         df_export.to_json(json_filename, orient='records', lines=False, force_ascii=False)
         logging.info(f"Saved {len(df_export)} properties for {state} to {filename} and {json_filename}")
